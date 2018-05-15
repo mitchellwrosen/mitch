@@ -1,0 +1,13 @@
+cabal-version: 2.0
+
+name: mitch
+version: 0
+build-type: Simple
+
+executable mitch
+  main-is: Main.hs
+  ghc-options: -Wall -O
+  build-depends:
+      base ^>= 4.11
+    , optparse-applicative ^>= 0.14
+    , process ^>= 1.6
