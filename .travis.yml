@@ -1,0 +1,29 @@
+language: c
+sudo: false
+
+git:
+  submodules: false
+
+cache:
+  directories:
+    - $HOME/.cabal/packages
+    - $HOME/.cabal/store
+
+addons:
+  apt:
+    packages:
+      - cabal-install-head
+      - ghc-8.4.2
+      - ghc-ppa-tools
+    sources:
+      - hvr-ghc
+
+before_install:
+  - export PATH=/opt/ghc/bin:/opt/ghc-ppa-tools/bin:$PATH
+
+install:
+  - cabal update -v
+  - cabal new-build -w ghc-8.4.2 -O0 -j2 --dependencies-only
+
+script:
+  - cabal new-build -w ghc-8.4.2 -O0 -j2
