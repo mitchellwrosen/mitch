@@ -53,20 +53,7 @@ dockerInfo =
 
 dockerGcParser :: Parser (IO ())
 dockerGcParser =
-  pure $ do
-    putStrLn "# Removing exited containers"
-    readCreateProcess (shell "docker ps -aq --filter=status=exited") "" >>= \case
-      "" ->
-        pure ()
-      ids ->
-        callCommand ("docker rm " ++ unwords (lines ids))
-
-    putStrLn "# Removing dangling images"
-    readCreateProcess (shell "docker images -q --filter=dangling=true") "" >>= \case
-      "" ->
-        pure ()
-      ids ->
-        callCommand ("docker rmi " ++ unwords (lines ids))
+  pure (callCommand "docker system prune -f")
 
 dockerGcInfo :: InfoMod (IO ())
 dockerGcInfo =
