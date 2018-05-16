@@ -7,8 +7,11 @@ tested-with: GHC == 8.4.2
 
 executable mitch
   main-is: Main.hs
+  other-modules:
+    Cidr
   ghc-options: -Wall -O
   build-depends:
       base ^>= 4.11
+    , lens ^>= 4.16
     , optparse-applicative ^>= 0.14
     , process ^>= 1.6
