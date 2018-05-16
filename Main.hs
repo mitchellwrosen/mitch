@@ -63,44 +63,50 @@ parser =
       , progDesc "Display the bits of an IPv4 address given in CIDR notation"
       )
 
-   , ( "docker"
-     , commands
-         [ ( "gc"
-           , pure (callCommand "docker system prune -f")
-           , progDesc "Garbage collect stopped containers and dangling images"
+    , ( "docker"
+      , commands
+          [ ( "gc"
+            , pure (callCommand "docker system prune -f")
+            , progDesc "Prune stopped containers, dangling images, unused volumes, and unused networks"
+            )
+          ]
+      , progDesc "Docker porcelain"
+      )
+
+    , ( "find-file"
+      , (\patt -> callCommand ("find . -type f -iname '" ++ patt ++ "'"))
+          <$> strArgument (metavar "PATTERN")
+      , progDesc "Find a file by regular expression"
+      )
+
+    , ( "gpg"
+      , commands
+         [ ( "restart-agent"
+           , pure (callCommand "gpgconf --kill all")
+           , progDesc "Restart the GPG agent"
            )
          ]
-     , progDesc "Docker porcelain"
-     )
+      , progDesc "GPG porcelain"
+      )
 
-   , ( "gpg"
-     , commands
-        [ ( "restart-agent"
-          , pure (callCommand "gpgconf --kill all")
-          , progDesc "Restart the GPG agent"
-          )
-        ]
-     , progDesc "GPG porcelain"
-     )
+     , ( "nix"
+       , commands
+           [ ( "install"
+             , (\name -> callCommand ("nix-env -i " ++ name))
+                 <$> strArgument (metavar "PACKAGE")
+             , progDesc "Install a package"
+             )
+           ]
+       , progDesc "Nix porcelain"
+       )
 
-   , ( "nix"
-     , commands
-         [ ( "install"
-           , (\name -> callCommand ("nix-env -i " ++ name))
-               <$> strArgument (metavar "PACKAGE")
-           , progDesc "Install a package"
-           )
-         ]
-     , progDesc "Nix porcelain"
-     )
+    , ( "pid"
+      , (\s -> callCommand ("pidof " ++ s))
+          <$> strArgument (metavar "NAME")
+      , progDesc "Find the pid of a running process"
+      )
 
-   , ( "pid"
-     , (\s -> callCommand ("pidof " ++ s))
-         <$> strArgument (metavar "NAME")
-     , progDesc "Find the pid of a running process"
-     )
-
-   ]
+    ]
 
 commands :: [(String, Parser a, InfoMod a)] -> Parser a
 commands =
