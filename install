@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -ex
+
+cabal new-build
+cp $(find dist-newstyle -name mitch -type f -executable) ~/.local/bin/
+
+mkdir -p $HOME/.config/zsh/rc.d
+mitch --bash-completion-script $(which mitch) > $HOME/.config/zsh/rc.d/mitch
