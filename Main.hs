@@ -63,34 +63,44 @@ parser =
       , progDesc "Display the bits of an IPv4 address given in CIDR notation"
       )
 
-   ,  ( "docker"
-      , commands
-          [ ( "gc"
-            , pure (callCommand "docker system prune -f")
-            , progDesc "Garbage collect stopped containers and dangling images"
-            )
-          ]
-      , progDesc "Docker porcelain"
-      )
+   , ( "docker"
+     , commands
+         [ ( "gc"
+           , pure (callCommand "docker system prune -f")
+           , progDesc "Garbage collect stopped containers and dangling images"
+           )
+         ]
+     , progDesc "Docker porcelain"
+     )
 
-    , ( "nix"
-      , commands
-          [ ( "install"
-            , (\name -> callCommand ("nix-env -i " ++ name))
-                <$> strArgument (metavar "PACKAGE")
-            , progDesc "Install a package"
-            )
-          ]
-      , progDesc "Nix porcelain"
-      )
+   , ( "gpg"
+     , commands
+        [ ( "restart-agent"
+          , pure (callCommand "gpgconf --kill all")
+          , progDesc "Restart the GPG agent"
+          )
+        ]
+     , progDesc "GPG porcelain"
+     )
 
-    , ( "pid"
-      , (\s -> callCommand ("pidof " ++ s))
-          <$> strArgument (metavar "NAME")
-      , progDesc "Find the pid of a running process"
-      )
+   , ( "nix"
+     , commands
+         [ ( "install"
+           , (\name -> callCommand ("nix-env -i " ++ name))
+               <$> strArgument (metavar "PACKAGE")
+           , progDesc "Install a package"
+           )
+         ]
+     , progDesc "Nix porcelain"
+     )
 
-    ]
+   , ( "pid"
+     , (\s -> callCommand ("pidof " ++ s))
+         <$> strArgument (metavar "NAME")
+     , progDesc "Find the pid of a running process"
+     )
+
+   ]
 
 commands :: [(String, Parser a, InfoMod a)] -> Parser a
 commands =
