@@ -24,7 +24,22 @@ main =
 parser :: Parser (IO ())
 parser =
   commands
-    [ ( "display-cidr"
+    [ ( "arch-linux"
+      , commands
+          [ ( "update-packages"
+            , pure (callCommand "pacman -Syu")
+            , progDesc "Update all installed packages"
+            )
+          , ( "which-package-owns"
+            , (\package -> callCommand ("pacman -Qo " ++ package))
+                <$> strArgument (metavar "PACKAGE")
+            , progDesc "Which package owns this file?"
+            )
+          ]
+      , progDesc "Arch linux porcelain"
+      )
+
+    , ( "display-cidr"
       , argument
           (maybeReader
             (\s -> do
