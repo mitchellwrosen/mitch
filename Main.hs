@@ -1,5 +1,6 @@
 {-# language LambdaCase     #-}
 {-# language NamedFieldPuns #-}
+{-# language ViewPatterns   #-}
 
 import Cidr (Cidr(..))
 
@@ -12,7 +13,15 @@ import Data.Bits.Lens
 import Data.Bool (bool)
 import Data.Word
 import Options.Applicative
+import System.Exit (exitFailure)
+import System.IO (hPutStrLn, stderr)
 import System.Process
+import Text.Read (readMaybe)
+
+data SshTunnelNode
+  = Local String Int
+  | Remote String String Int
+  deriving Show
 
 main :: IO ()
 main =
@@ -106,6 +115,54 @@ parser =
       , progDesc "Find the pid of a running process"
       )
 
+    , ( "ssh-tunnel"
+      , let
+          nodeParser :: Parser SshTunnelNode
+          nodeParser =
+            argument
+              (maybeReader readLocalNode <|> maybeReader readRemoteNode)
+              mempty
+
+          readLocalNode :: String -> Maybe SshTunnelNode
+          readLocalNode s = do
+            [addr, readMaybe -> Just port] <-
+              pure (splitOnComma s)
+            pure (Local addr port)
+
+          readRemoteNode :: String -> Maybe SshTunnelNode
+          readRemoteNode s = do
+            [host, addr, readMaybe -> Just port] <-
+              pure (splitOnComma s)
+            pure (Remote host addr port)
+
+          splitOnComma :: String -> [String]
+          splitOnComma s =
+            case break (== ':') s of
+              (t, []) -> [t]
+              (t, _:u) -> t : splitOnComma u
+        in
+          (\case
+            (Local laddr lport, Remote host raddr rport) -> do
+              let cmd :: String
+                  cmd =
+                    "ssh -N -L " ++ laddr ++ ":" ++ show lport ++ ":" ++ raddr ++ ":"
+                      ++ show rport ++ " " ++ host
+              putStrLn cmd
+              callCommand cmd
+            (Remote host raddr rport, Local laddr lport) -> do
+              let cmd :: String
+                  cmd =
+                    "ssh -N -R " ++ raddr ++ ":" ++ show rport ++ ":" ++ laddr ++ ":"
+                      ++ show lport ++ " " ++ host
+              putStrLn cmd
+              callCommand cmd
+            _ -> do
+              hPutStrLn stderr "Must provide one local node, one remote node"
+              exitFailure)
+            <$> (liftA2 (,) nodeParser nodeParser)
+
+      , progDesc "Forward or reverse SSH tunnel"
+      )
     ]
 
 commands :: [(String, Parser a, InfoMod a)] -> Parser a
