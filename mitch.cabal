@@ -10,9 +10,14 @@ executable mitch
   other-modules:
     Cidr
   ghc-options: -Wall -O
-  build-depends:
-      base ^>= 4.11
-    , lens ^>= 4.16
-    , optparse-applicative ^>= 0.14
-    , process ^>= 1.6
   default-language: Haskell2010
+  default-extensions:
+      LambdaCase
+    , NamedFieldPuns
+    , NoImplicitPrelude
+    , OverloadedStrings
+    , ViewPatterns
+
+  build-depends:
+      lens
+    , mitchell-stdlib

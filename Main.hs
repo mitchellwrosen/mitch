@@ -1,22 +1,17 @@
-{-# language LambdaCase     #-}
-{-# language NamedFieldPuns #-}
-{-# language ViewPatterns   #-}
+import Mitchell
 
-import Cidr (Cidr(..))
+import Cidr (Cidr(..), parseCidr)
 
-import qualified Cidr
-
-import Control.Arrow ((>>>))
+import Bool (bool)
 import Control.Lens ((^..), to)
-import Control.Monad
 import Data.Bits.Lens
-import Data.Bool (bool)
-import Data.Word
-import Options.Applicative
-import System.Exit (exitFailure)
-import System.IO (hPutStrLn, stderr)
-import System.Process
-import Text.Read (readMaybe)
+import Exception (exitFailure)
+import List (break)
+import Optparse
+import Process (runProcess_, shell)
+import Read (readMaybe)
+import String (String)
+import Text (pack)
 
 data SshTunnelNode
   = Local String Int
@@ -36,11 +31,11 @@ parser =
     [ ( "arch-linux"
       , commands
           [ ( "update-packages"
-            , pure (callCommand "pacman -Syu")
+            , pure (runProcess_ (shell "pacman -Syu"))
             , progDesc "Update all installed packages"
             )
           , ( "which-package-owns"
-            , (\package -> callCommand ("pacman -Qo " ++ package))
+            , (\package -> runProcess_ (shell ("pacman -Qo " ++ package)))
                 <$> strArgument (metavar "PACKAGE")
             , progDesc "Which package owns this file?"
             )
@@ -54,20 +49,22 @@ parser =
             (\s -> do
               let handle :: Cidr -> IO ()
                   handle Cidr{netmask, address = (a, b, c, d)} = do
-                    let showBits :: Word8 -> String
+                    let showBits :: Word8 -> Text
                         showBits w =
-                          w ^.. bits . to (bool '0' '1')
-                    putStrLn $
+                          pack (w ^.. bits . to (bool '0' '1'))
+                    putStrLn . pack $
                            show a ++ replicate (8 - length (show a)) ' '
                         ++ show b ++ replicate (8 - length (show b)) ' '
                         ++ show c ++ replicate (8 - length (show c)) ' '
                         ++ show d ++ replicate (8 - length (show d)) ' '
-                    putStrLn (showBits a ++ showBits b ++ showBits c ++ showBits d)
+                    putStrLn
+                      (showBits a <> showBits b <> showBits c <> showBits d)
                     case netmask of
-                      Just netmask'
-                        | netmask' > 0 -> putStrLn (replicate netmask' '^')
-                      _ -> pure ()
-              handle <$> Cidr.parse s))
+                      Just netmask' | netmask' > 0 ->
+                        putStrLn (pack (replicate netmask' '^'))
+                      _ ->
+                        pure ()
+              handle <$> parseCidr s))
           (metavar "IP")
       , progDesc "Display the bits of an IPv4 address given in CIDR notation"
       )
@@ -75,7 +72,7 @@ parser =
     , ( "docker"
       , commands
           [ ( "gc"
-            , pure (callCommand "docker system prune -f")
+            , pure (runProcess_ (shell "docker system prune -f"))
             , progDesc "Prune stopped containers, dangling images, unused volumes, and unused networks"
             )
           ]
@@ -83,7 +80,8 @@ parser =
       )
 
     , ( "find-file"
-      , (\patt -> callCommand ("find . -type f -iname '" ++ patt ++ "'"))
+      , (\patt ->
+          runProcess_ (shell ("find . -type f -iname '" ++ patt ++ "'")))
           <$> strArgument (metavar "PATTERN")
       , progDesc "Find a file by regular expression"
       )
@@ -91,7 +89,7 @@ parser =
     , ( "gpg"
       , commands
          [ ( "restart-agent"
-           , pure (callCommand "gpgconf --kill all")
+           , pure (runProcess_ (shell "gpgconf --kill all"))
            , progDesc "Restart the GPG agent"
            )
          ]
@@ -101,7 +99,7 @@ parser =
      , ( "nix"
        , commands
            [ ( "install"
-             , (\name -> callCommand ("nix-env -i " ++ name))
+             , (\name -> runProcess_ (shell ("nix-env -i " ++ name)))
                  <$> strArgument (metavar "PACKAGE")
              , progDesc "Install a package"
              )
@@ -110,7 +108,7 @@ parser =
        )
 
     , ( "pid"
-      , (\s -> callCommand ("pidof " ++ s))
+      , (\s -> runProcess_ (shell ("pidof " ++ s)))
           <$> strArgument (metavar "NAME")
       , progDesc "Find the pid of a running process"
       )
@@ -147,15 +145,15 @@ parser =
                   cmd =
                     "ssh -N -L " ++ laddr ++ ":" ++ show lport ++ ":" ++ raddr ++ ":"
                       ++ show rport ++ " " ++ host
-              putStrLn cmd
-              callCommand cmd
+              putStrLn (pack cmd)
+              runProcess_ (shell cmd)
             (Remote host raddr rport, Local laddr lport) -> do
               let cmd :: String
                   cmd =
                     "ssh -N -R " ++ raddr ++ ":" ++ show rport ++ ":" ++ laddr ++ ":"
                       ++ show lport ++ " " ++ host
-              putStrLn cmd
-              callCommand cmd
+              putStrLn (pack cmd)
+              runProcess_ (shell cmd)
             _ -> do
               hPutStrLn stderr "Must provide one local node, one remote node"
               exitFailure)

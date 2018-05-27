@@ -1,51 +1,46 @@
 module Cidr
   ( Cidr(..)
-  , parse
+  , parseCidr
   ) where
 
-import Control.Monad
-import Data.Char
-import Data.Word
-import Text.ParserCombinators.ReadP
+import Mitchell hiding (some)
+
+import Parser.Text
+import Read.Partial (read)
+import String (String)
 
 data Cidr = Cidr
   { netmask :: Maybe Int
   , address :: (Word8, Word8, Word8, Word8)
   }
 
-parse :: String -> Maybe Cidr
-parse s = do
-  [(x, "")] <- pure (readP_to_S parser s)
-  pure x
+type Parser
+  = Parsec () String
 
-parser :: ReadP Cidr
+parseCidr :: String -> Maybe Cidr
+parseCidr = do
+  parseMaybe parser
+
+parser :: Parser Cidr
 parser = do
   a <- hunk <* char '.'
   b <- hunk <* char '.'
   c <- hunk <* char '.'
   d <- hunk
-  ss <- look
-  case ss of
-    '/':_ -> do
-      n <- char '/' *> net
-      pure Cidr
-        { netmask = Just n
-        , address = (a, b, c, d)
-        }
-    _ ->
-      pure Cidr
-        { netmask = Nothing
-        , address = (a, b, c, d)
-        }
+  n <- optional (char '/' *> net)
+  pure Cidr
+    { netmask = n
+    , address = (a, b, c, d)
+    }
 
-hunk :: ReadP Word8
+hunk :: Parser Word8
 hunk = do
-  n <- read <$> munch1 isDigit
+  n <- read <$> some digitChar
   guard ((n::Int) >= 0 && n <= 255)
   pure (fromIntegral n)
 
-net :: ReadP Int
+net :: Parser Int
 net = do
-  n <- read <$> munch1 isDigit
+  n <- read <$> some digitChar
   guard (n >= 0 && n <= 32)
   pure n
