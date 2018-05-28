@@ -6,18 +6,20 @@ build-type: Simple
 tested-with: GHC == 8.4.2
 
 executable mitch
-  main-is: Main.hs
-  other-modules:
-    Cidr
-  ghc-options: -Wall -O
+  build-depends:
+      dhall
+    , file-embed
+    , lens
+    , mitchell-stdlib
   default-language: Haskell2010
   default-extensions:
       LambdaCase
     , NamedFieldPuns
     , NoImplicitPrelude
     , OverloadedStrings
+    , ScopedTypeVariables
     , ViewPatterns
-
-  build-depends:
-      lens
-    , mitchell-stdlib
+  ghc-options: -Wall -O
+  main-is: Main.hs
+  other-modules:
+    Cidr

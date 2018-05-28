@@ -1,0 +1,21 @@
+\(name : Text) ->
+
+''
+#!/bin/sh
+
+set -e
+
+SHAKEFILE=./.shake/shake
+
+if [ -x "$SHAKEFILE" ]; then
+  "$SHAKEFILE" "$@"
+else
+  mkdir -p .shake
+  if [ ! -f ${name}.cabal ]; then
+    dhall-to-text <<< ./${name}.cabal.dhall > ${name}.cabal
+  fi
+  cabal new-build shakefile
+  cp $(cabal-plan list-bin ${name}-shakefile) "$SHAKEFILE"
+  exec ./Shakefile
+fi
+''

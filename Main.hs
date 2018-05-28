@@ -1,3 +1,5 @@
+{-# language TemplateHaskell #-}
+
 import Mitchell
 
 import Cidr (Cidr(..), parseCidr)
@@ -5,13 +7,21 @@ import Cidr (Cidr(..), parseCidr)
 import Bool (bool)
 import Control.Lens ((^..), to)
 import Data.Bits.Lens
+import Data.FileEmbed (embedDir)
 import Exception (exitFailure)
-import List (break)
+import File
+import File.Text (writeFile)
+import List (break, lookup)
 import Optparse
-import Process (runProcess_, shell)
+import Process (runProcess_, setWorkingDir, shell)
 import Read (readMaybe)
 import String (String)
 import Text (pack)
+
+import qualified Dhall
+import qualified Text
+import qualified Text.Lazy
+import qualified Text.Lazy as Lazy (Text)
 
 data SshTunnelNode
   = Local String Int
@@ -107,6 +117,12 @@ parser =
        , progDesc "Nix porcelain"
        )
 
+    , ( "init-haskell-project"
+      , initHaskellProject
+          <$> strArgument (metavar "NAME")
+      , progDesc "Initialize a Haskell project"
+      )
+
     , ( "pid"
       , (\s -> runProcess_ (shell ("pidof " ++ s)))
           <$> strArgument (metavar "NAME")
@@ -168,3 +184,62 @@ commands =
   map (\(n, p, m) -> command n (info p m))
     >>> mconcat
     >>> hsubparser
+
+initHaskellProject :: String -> IO ()
+initHaskellProject name = do
+  createDirectory name
+  createDirectory (name ++ "/app")
+  createDirectory (name ++ "/shakefile")
+  createDirectory (name ++ "/src")
+
+  let run :: String -> IO ()
+      run s =
+        runProcess_ (setWorkingDir name (shell s))
+
+  -- Initialize git repo and add submodules
+  run "git init"
+  run "git submodule add https://github.com/dhall-lang/Prelude deps/dhall"
+  run "git submodule add https://github.com/mitchellwrosen/mitchell-stdlib deps/mitchell-stdlib"
+
+  let dhall :: FilePath -> FilePath -> IO ()
+      dhall src dst = do
+        let bytes :: Text
+            bytes =
+              Text.decodeUtf8 (fromJust (lookup src initHaskellProjectDir))
+        render :: Lazy.Text -> Text <-
+          Dhall.input Dhall.auto (Text.Lazy.fromStrict bytes)
+        writeFile (name ++ "/" ++ dst) (render (Text.Lazy.pack name))
+
+  let copy :: FilePath -> FilePath -> IO ()
+      copy src dst =
+        writeFile
+          (name ++ "/" ++ dst)
+          (Text.decodeUtf8 (fromJust (lookup src initHaskellProjectDir)))
+
+  dhall "cabal.dhall" (name ++ ".cabal.dhall")
+  dhall "Shake.hs" "shakefile/Main.hs"
+  dhall "Shakefile" "Shakefile"
+  dhall "shakefile.cabal" ("shakefile/" ++ name ++ "-shakefile.cabal")
+
+  copy "CHANGELOG.md" "CHANGELOG.md"
+  copy "cabal.project" "cabal.project"
+  copy "ghci" ".ghci"
+  copy "gitignore" ".gitignore"
+  copy "LICENSE" "LICENSE"
+  copy "Main.hs" "app/Main.hs"
+  copy "Setup.hs" "Setup.hs"
+  copy "travis.yml" ".travis.yml"
+
+  run "chmod +x ./Shakefile"
+  run "./Shakefile"
+  run "stack init --resolver lts"
+  run "sed -i -e 's/^#.*//' -e '/^$/d' stack.yaml"
+  run "git add --all"
+
+initHaskellProjectDir :: [(FilePath, ByteString)]
+initHaskellProjectDir =
+  $(embedDir "init-haskell-project")
+
+fromJust :: Maybe a -> a
+fromJust (Just x) = x
+fromJust Nothing = error "fromJust: Nothing"

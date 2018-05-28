@@ -7,3 +7,4 @@ package mitchell-stdlib
     +megaparsec
     +optparse-applicative
     +typed-process
+    +unliftio
