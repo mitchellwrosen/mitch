@@ -2,3 +2,9 @@ packages:
     .,
     deps/mitchell-stdlib,
     shakefile
+
+package mitchell-stdlib
+  flags:
+    +directory
+    +safe-exceptions
+    +unix

@@ -217,6 +217,7 @@ initHaskellProject name = do
           (Text.decodeUtf8 (fromJust (lookup src initHaskellProjectDir)))
 
   dhall "cabal.dhall" (name ++ ".cabal.dhall")
+  dhall "Main.hs" "app/Main.hs"
   dhall "Shake.hs" "shakefile/Main.hs"
   dhall "Shakefile" "Shakefile"
   dhall "shakefile.cabal" ("shakefile/" ++ name ++ "-shakefile.cabal")
@@ -226,8 +227,6 @@ initHaskellProject name = do
   copy "ghci" ".ghci"
   copy "gitignore" ".gitignore"
   copy "LICENSE" "LICENSE"
-  copy "Main.hs" "app/Main.hs"
-  copy "Setup.hs" "Setup.hs"
   copy "travis.yml" ".travis.yml"
 
   run "chmod +x ./Shakefile"

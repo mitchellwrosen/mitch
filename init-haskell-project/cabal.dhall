@@ -118,22 +118,23 @@ name: ${name}
 tested-with: GHC == 8.4.2
 version: 0.1.0
 
-library
-  build-depends:
-      mitchell-stdlib
-  default-extensions: ''${default-extensions}
-  if impl(ghc >= 8.4.2)
-    default-extensions: ''${default-extensions-8-4-2}
-  default-language: Haskell2010
-  -- exposed-modules:
-  ghc-options: ''${ghc-options}
-  if impl(ghc >= 8.4.2)
-    ghc-options: ''${ghc-options-8-4-2}
-  hs-source-dirs: src
+-- library
+--   build-depends:
+--       mitchell-stdlib
+--   default-extensions: ''${default-extensions}
+--   if impl(ghc >= 8.4.2)
+--     default-extensions: ''${default-extensions-8-4-2}
+--   default-language: Haskell2010
+--   -- exposed-modules:
+--   ghc-options: ''${ghc-options}
+--   if impl(ghc >= 8.4.2)
+--     ghc-options: ''${ghc-options-8-4-2}
+--   hs-source-dirs: src
 
 executable ${name}
   build-depends:
       mitchell-stdlib
+    , unix ^>= 2.7
   default-extensions: ''${default-extensions}
   if impl(ghc >= 8.4.2)
     default-extensions: ''${default-extensions-8-4-2}

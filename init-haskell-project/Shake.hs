@@ -15,7 +15,7 @@ main =
       need ["${name}.cabal"]
       runAfter $
         callCommand
-          "ghcid -c 'cabal new-repl lib:${name}' --restart cabal.project --restart ${name}.cabal"
+          "ghcid -c 'cabal new-repl exe:${name}' --restart cabal.project --restart ${name}.cabal -T sendSIGINT -W"
 
     want ["bin/${name}"]
 
