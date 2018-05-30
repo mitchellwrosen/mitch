@@ -7,4 +7,5 @@ package mitchell-stdlib
   flags:
     +directory
     +safe-exceptions
+    +typed-process
     +unix

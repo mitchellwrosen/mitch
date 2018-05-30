@@ -189,6 +189,7 @@ initHaskellProject :: String -> IO ()
 initHaskellProject name = do
   createDirectory name
   createDirectory (name ++ "/app")
+  createDirectory (name ++ "/config")
   createDirectory (name ++ "/shakefile")
   createDirectory (name ++ "/src")
 
@@ -220,10 +221,13 @@ initHaskellProject name = do
   dhall "Main.hs" "app/Main.hs"
   dhall "Shake.hs" "shakefile/Main.hs"
   dhall "Shakefile" "Shakefile"
-  dhall "shakefile.cabal" ("shakefile/" ++ name ++ "-shakefile.cabal")
+  dhall "shakefile.cabal.dhall" ("shakefile/" ++ name ++ "-shakefile.cabal.dhall")
+
 
   copy "CHANGELOG.md" "CHANGELOG.md"
   copy "cabal.project" "cabal.project"
+  copy "default-extensions" "config/default-extensions"
+  copy "ghc-options" "config/ghc-options"
   copy "ghci" ".ghci"
   copy "gitignore" ".gitignore"
   copy "LICENSE" "LICENSE"

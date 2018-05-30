@@ -3,7 +3,7 @@
 ''
 module Main
   ( main
-  , sendSIGINT
+  , sendSIGUSR1
   ) where
 
 import Mitchell
@@ -12,7 +12,7 @@ import Exception (bracket_)
 import File (FilePath, removePathForcibly)
 import File.Text (readFile, writeFile)
 import Process (getProcessID)
-import System.Posix.Signals (sigINT, signalProcess)
+import System.Posix.Signals (sigUSR1, signalProcess)
 import System.Posix.Types (CPid)
 import Read (readMaybe)
 import Text (pack, unpack)
@@ -29,15 +29,15 @@ main' =
   pure ()
 
 --------------------------------------------------------------------------------
--- Send SIGINT to the running process, if any
+-- Send SIGUSR1 to the running process, if any
 --------------------------------------------------------------------------------
 
 pidfile :: FilePath
 pidfile =
   ".${name}.pid"
 
-sendSIGINT :: IO ()
-sendSIGINT =
+sendSIGUSR1 :: IO ()
+sendSIGUSR1 =
   go <|> pure ()
  where
   go :: IO ()
@@ -46,5 +46,5 @@ sendSIGINT =
       readFile pidfile
     Just pid :: Maybe CPid <-
       pure (readMaybe (unpack bytes))
-    signalProcess sigINT pid
+    signalProcess sigUSR1 pid
 ''
