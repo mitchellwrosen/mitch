@@ -7,7 +7,6 @@ import Mitchell hiding (some)
 
 import Parser.Text
 import Read.Partial (read)
-import String (String)
 
 data Cidr = Cidr
   { netmask :: Maybe Int
@@ -15,9 +14,9 @@ data Cidr = Cidr
   }
 
 type Parser
-  = Parsec () String
+  = Parsec () [Char]
 
-parseCidr :: String -> Maybe Cidr
+parseCidr :: [Char] -> Maybe Cidr
 parseCidr = do
   parseMaybe parser
 

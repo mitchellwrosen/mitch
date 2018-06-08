@@ -1,27 +1,6 @@
-let dhall = ../deps/dhall/package.dhall
-
-in
-
-{ v8-2-2 =
-    dhall.`Text`.concatSep " "
-      [ "-fprint-expanded-synonyms"
-      , "-fprint-explicit-foralls"
-      , "-fprint-explicit-kinds"
-      , "-fprint-unicode-syntax"
-      , "-freverse-errors"
-      , "-Wall"
-      , "-Wcompat"
-      , "-Widentities"
-      , "-Wincomplete-record-updates"
-      , "-Wincomplete-uni-patterns"
-      , "-Wmissing-local-signatures"
-      , "-Wnoncanonical-monad-instances"
-      , "-Wnoncanonical-monadfail-instances"
-      , "-Wredundant-constraints"
-      ]
-, v8-4-2 =
-    dhall.`Text`.concatSep " "
-      [ "-Wmissing-export-lists"
-      , "-Wpartial-fields"
-      ]
-}
+  ghc-options:
+    -fprint-expanded-synonyms -fprint-explicit-foralls -fprint-explicit-kinds
+    -fprint-unicode-syntax -freverse-errors -Wall -Wcompat -Widentities
+    -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists
+    -Wmissing-local-signatures -Wnoncanonical-monad-instances
+    -Wnoncanonical-monadfail-instances -Wpartial-fields -Wredundant-constraints

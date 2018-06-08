@@ -4,7 +4,7 @@ with-compiler: ghc-8.4.2
 
 package mitchell-stdlib
   flags:
-    +megaparsec
-    +optparse-applicative
-    +typed-process
-    +unliftio
+    +dep-megaparsec
+    +dep-optparse-applicative
+    +dep-typed-process
+    +dep-unliftio

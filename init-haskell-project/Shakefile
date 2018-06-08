@@ -8,17 +8,11 @@ set -e
 SHAKEFILE=./.shake/shake
 
 if [ -x "$SHAKEFILE" ]; then
-  "$SHAKEFILE" "$@"
+  exec "$SHAKEFILE" "$@"
 else
   mkdir -p .shake
-  if [ ! -f ${name}.cabal ]; then
-    dhall-to-text <<< ./${name}.cabal.dhall > ${name}.cabal
-  fi
-  if [ ! -f shakefile/shakefile.cabal ]; then
-    dhall-to-text <<< ./shakefile/${name}-shakefile.cabal.dhall > shakefile/${name}-shakefile.cabal
-  fi
   cabal new-build shakefile
   cp $(cabal-plan list-bin ${name}-shakefile) "$SHAKEFILE"
-  exec ./Shakefile
+  exec "$SHAKEFILE" "$@"
 fi
 ''

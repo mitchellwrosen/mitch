@@ -1,0 +1,32 @@
+\(name : Text) ->
+
+''
+cabal-version:
+  2.2
+
+build-type:
+  Simple
+
+name:
+  ${name}-shakefile
+
+version:
+  0
+
+executable ${name}-shakefile
+  build-depends:
+      mitchell-stdlib
+    , shake ^>= 0.16
+    , unix ^>= 2.7
+
+${./default-extensions as Text}
+
+  default-language:
+    Haskell2010
+
+${./ghc-options as Text}
+    -threaded -rtsopts "-with-rtsopts=-N"
+
+  main-is:
+    Main.hs
+''

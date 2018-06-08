@@ -15,17 +15,16 @@ import List (break, lookup)
 import Optparse
 import Process (runProcess_, setWorkingDir, shell)
 import Read (readMaybe)
-import String (String)
 import Text (pack)
 
 import qualified Dhall
-import qualified Text
+import qualified Text.Partial
 import qualified Text.Lazy
 import qualified Text.Lazy as Lazy (Text)
 
 data SshTunnelNode
-  = Local String Int
-  | Remote String String Int
+  = Local [Char] Int
+  | Remote [Char] [Char] Int
   deriving Show
 
 main :: IO ()
@@ -137,19 +136,19 @@ parser =
               (maybeReader readLocalNode <|> maybeReader readRemoteNode)
               mempty
 
-          readLocalNode :: String -> Maybe SshTunnelNode
+          readLocalNode :: [Char] -> Maybe SshTunnelNode
           readLocalNode s = do
             [addr, readMaybe -> Just port] <-
               pure (splitOnComma s)
             pure (Local addr port)
 
-          readRemoteNode :: String -> Maybe SshTunnelNode
+          readRemoteNode :: [Char] -> Maybe SshTunnelNode
           readRemoteNode s = do
             [host, addr, readMaybe -> Just port] <-
               pure (splitOnComma s)
             pure (Remote host addr port)
 
-          splitOnComma :: String -> [String]
+          splitOnComma :: [Char] -> [[Char]]
           splitOnComma s =
             case break (== ':') s of
               (t, []) -> [t]
@@ -157,14 +156,14 @@ parser =
         in
           (\case
             (Local laddr lport, Remote host raddr rport) -> do
-              let cmd :: String
+              let cmd :: [Char]
                   cmd =
                     "ssh -N -L " ++ laddr ++ ":" ++ show lport ++ ":" ++ raddr ++ ":"
                       ++ show rport ++ " " ++ host
               putStrLn (pack cmd)
               runProcess_ (shell cmd)
             (Remote host raddr rport, Local laddr lport) -> do
-              let cmd :: String
+              let cmd :: [Char]
                   cmd =
                     "ssh -N -R " ++ raddr ++ ":" ++ show rport ++ ":" ++ laddr ++ ":"
                       ++ show lport ++ " " ++ host
@@ -179,13 +178,13 @@ parser =
       )
     ]
 
-commands :: [(String, Parser a, InfoMod a)] -> Parser a
+commands :: [([Char], Parser a, InfoMod a)] -> Parser a
 commands =
   map (\(n, p, m) -> command n (info p m))
     >>> mconcat
     >>> hsubparser
 
-initHaskellProject :: String -> IO ()
+initHaskellProject :: [Char] -> IO ()
 initHaskellProject name = do
   createDirectory name
   createDirectory (name ++ "/app")
@@ -193,20 +192,20 @@ initHaskellProject name = do
   createDirectory (name ++ "/shakefile")
   createDirectory (name ++ "/src")
 
-  let run :: String -> IO ()
+  let run :: [Char] -> IO ()
       run s =
         runProcess_ (setWorkingDir name (shell s))
 
   -- Initialize git repo and add submodules
   run "git init"
-  run "git submodule add https://github.com/dhall-lang/Prelude deps/dhall"
   run "git submodule add https://github.com/mitchellwrosen/mitchell-stdlib deps/mitchell-stdlib"
 
   let dhall :: FilePath -> FilePath -> IO ()
       dhall src dst = do
         let bytes :: Text
             bytes =
-              Text.decodeUtf8 (fromJust (lookup src initHaskellProjectDir))
+              Text.Partial.decodeUtf8
+                (fromJust (lookup src initHaskellProjectDir))
         render :: Lazy.Text -> Text <-
           Dhall.input Dhall.auto (Text.Lazy.fromStrict bytes)
         writeFile (name ++ "/" ++ dst) (render (Text.Lazy.pack name))
@@ -215,19 +214,17 @@ initHaskellProject name = do
       copy src dst =
         writeFile
           (name ++ "/" ++ dst)
-          (Text.decodeUtf8 (fromJust (lookup src initHaskellProjectDir)))
+          (Text.Partial.decodeUtf8
+            (fromJust (lookup src initHaskellProjectDir)))
 
-  dhall "cabal.dhall" (name ++ ".cabal.dhall")
+  dhall "cabal" (name ++ ".cabal")
   dhall "Main.hs" "app/Main.hs"
   dhall "Shake.hs" "shakefile/Main.hs"
   dhall "Shakefile" "Shakefile"
-  dhall "shakefile.cabal.dhall" ("shakefile/" ++ name ++ "-shakefile.cabal.dhall")
-
+  dhall "shakefile.cabal" ("shakefile/" ++ name ++ "-shakefile.cabal")
 
   copy "CHANGELOG.md" "CHANGELOG.md"
   copy "cabal.project" "cabal.project"
-  copy "default-extensions" "config/default-extensions"
-  copy "ghc-options" "config/ghc-options"
   copy "ghci" ".ghci"
   copy "gitignore" ".gitignore"
   copy "LICENSE" "LICENSE"
