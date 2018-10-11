@@ -3,7 +3,7 @@ module Cidr
   , parseCidr
   ) where
 
-import Mitchell hiding (some)
+import Mitchell.Prelude hiding (optional)
 
 import Parser.Text
 import Read.Partial (read)

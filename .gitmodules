@@ -1,3 +1,0 @@
-[submodule "deps/mitchell-stdlib"]
-	path = deps/mitchell-stdlib
-	url = git@github.com:mitchellwrosen/mitchell-stdlib

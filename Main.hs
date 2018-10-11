@@ -1,26 +1,23 @@
 {-# language TemplateHaskell #-}
 
-import Mitchell
+import Mitchell.Prelude
 
 import Cidr (Cidr(..), parseCidr)
 
 import Bool (bool)
-import Control.Lens ((^..), to)
+import Char
+import Optic.Fold ((^..))
+import Optic.Getter (to)
 import Data.Bits.Lens
-import Data.FileEmbed (embedDir)
 import Exception (exitFailure)
-import File
-import File.Text (writeFile)
-import List (break, lookup)
-import Optparse
-import Process (runProcess_, setWorkingDir, shell)
+import List (break)
+import Monad (join)
+import Parser.Cli
+import Process (runProcess_, shell)
+import Printf (printf)
 import Read (readMaybe)
+import System.Posix.Signals
 import Text (pack)
-
-import qualified Dhall
-import qualified Text.Partial
-import qualified Text.Lazy
-import qualified Text.Lazy as Lazy (Text)
 
 data SshTunnelNode
   = Local [Char] Int
@@ -40,7 +37,10 @@ parser =
     [ ( "arch-linux"
       , commands
           [ ( "update-packages"
-            , pure (runProcess_ (shell "pacman -Syu"))
+            , pure $ do
+                runProcess_ (shell "pacman -S archlinux-keyring")
+                runProcess_ (shell "pacman-key --refresh-keys")
+                runProcess_ (shell "pacman -Syu")
             , progDesc "Update all installed packages"
             )
           , ( "which-package-owns"
@@ -81,7 +81,9 @@ parser =
     , ( "docker"
       , commands
           [ ( "gc"
-            , pure (runProcess_ (shell "docker system prune -f"))
+            , pure $ do
+                runProcess_ (shell "docker system prune -f")
+                runProcess_ (shell "docker volume prune -f")
             , progDesc "Prune stopped containers, dangling images, unused volumes, and unused networks"
             )
           ]
@@ -116,16 +118,65 @@ parser =
        , progDesc "Nix porcelain"
        )
 
-    , ( "init-haskell-project"
-      , initHaskellProject
-          <$> strArgument (metavar "NAME")
-      , progDesc "Initialize a Haskell project"
-      )
-
     , ( "pid"
       , (\s -> runProcess_ (shell ("pidof " ++ s)))
           <$> strArgument (metavar "NAME")
       , progDesc "Find the pid of a running process"
+      )
+
+    , ( "signal"
+      , (\arg1 arg2 ->
+          let
+            readPid :: [Char] -> Maybe Int
+            readPid =
+              readMaybe
+
+            readSig :: [Char] -> Maybe Int
+            readSig =
+              map toLower >>> \case
+                "abrt" -> pure (fromIntegral sigABRT)
+                "alrm" -> pure (fromIntegral sigALRM)
+                "bus" -> pure (fromIntegral sigBUS)
+                "chld" -> pure (fromIntegral sigCHLD)
+                "cont" -> pure (fromIntegral sigCONT)
+                "fpe" -> pure (fromIntegral sigFPE)
+                "hup" -> pure (fromIntegral sigHUP)
+                "ill" -> pure (fromIntegral sigILL)
+                "int" -> pure (fromIntegral sigINT)
+                "kill" -> pure (fromIntegral sigKILL)
+                "pipe" -> pure (fromIntegral sigPIPE)
+                "poll" -> pure (fromIntegral sigPOLL)
+                "prof" -> pure (fromIntegral sigPROF)
+                "quit" -> pure (fromIntegral sigQUIT)
+                "segv" -> pure (fromIntegral sigSEGV)
+                "stop" -> pure (fromIntegral sigSTOP)
+                "sys" -> pure (fromIntegral sigSYS)
+                "term" -> pure (fromIntegral sigTERM)
+                "trap" -> pure (fromIntegral sigTRAP)
+                "tstp" -> pure (fromIntegral sigTSTP)
+                "ttin" -> pure (fromIntegral sigTTIN)
+                "ttou" -> pure (fromIntegral sigTTOU)
+                "urg" -> pure (fromIntegral sigURG)
+                "usr1" -> pure (fromIntegral sigUSR1)
+                "usr2" -> pure (fromIntegral sigUSR2)
+                "vtalrm" -> pure (fromIntegral sigVTALRM)
+                "xcpu" -> pure (fromIntegral sigXCPU)
+                "xfsz" -> pure (fromIntegral sigXFSZ)
+                _ -> Nothing
+          in
+            case (readPid arg1, readSig arg2) of
+              (Just pid, Just sig) ->
+                runProcess_ (shell (printf "kill -%d %d" sig pid))
+              _ ->
+                case (readSig arg1, readPid arg2) of
+                  (Just sig, Just pid) ->
+                    runProcess_ (shell (printf "kill -%d %d" sig pid))
+                  _ ->
+                    putStrLn "Parse error"
+          )
+          <$> strArgument (metavar "SIG|PID")
+          <*> strArgument (metavar "SIG|PID")
+      , progDesc "Signal a process"
       )
 
     , ( "ssh-tunnel"
@@ -183,62 +234,6 @@ commands =
   map (\(n, p, m) -> command n (info p m))
     >>> mconcat
     >>> hsubparser
-
-initHaskellProject :: [Char] -> IO ()
-initHaskellProject name = do
-  createDirectory name
-  createDirectory (name ++ "/app")
-  createDirectory (name ++ "/config")
-  createDirectory (name ++ "/shakefile")
-  createDirectory (name ++ "/src")
-
-  let run :: [Char] -> IO ()
-      run s =
-        runProcess_ (setWorkingDir name (shell s))
-
-  -- Initialize git repo and add submodules
-  run "git init"
-  run "git submodule add https://github.com/mitchellwrosen/mitchell-stdlib deps/mitchell-stdlib"
-
-  let dhall :: FilePath -> FilePath -> IO ()
-      dhall src dst = do
-        let bytes :: Text
-            bytes =
-              Text.Partial.decodeUtf8
-                (fromJust (lookup src initHaskellProjectDir))
-        render :: Lazy.Text -> Text <-
-          Dhall.input Dhall.auto (Text.Lazy.fromStrict bytes)
-        writeFile (name ++ "/" ++ dst) (render (Text.Lazy.pack name))
-
-  let copy :: FilePath -> FilePath -> IO ()
-      copy src dst =
-        writeFile
-          (name ++ "/" ++ dst)
-          (Text.Partial.decodeUtf8
-            (fromJust (lookup src initHaskellProjectDir)))
-
-  dhall "cabal" (name ++ ".cabal")
-  dhall "Main.hs" "app/Main.hs"
-  dhall "Shake.hs" "shakefile/Main.hs"
-  dhall "Shakefile" "Shakefile"
-  dhall "shakefile.cabal" ("shakefile/" ++ name ++ "-shakefile.cabal")
-
-  copy "CHANGELOG.md" "CHANGELOG.md"
-  copy "cabal.project" "cabal.project"
-  copy "ghci" ".ghci"
-  copy "gitignore" ".gitignore"
-  copy "LICENSE" "LICENSE"
-  copy "travis.yml" ".travis.yml"
-
-  run "chmod +x ./Shakefile"
-  run "./Shakefile"
-  run "stack init --resolver lts"
-  run "sed -i -e 's/^#.*//' -e '/^$/d' stack.yaml"
-  run "git add --all"
-
-initHaskellProjectDir :: [(FilePath, ByteString)]
-initHaskellProjectDir =
-  $(embedDir "init-haskell-project")
 
 fromJust :: Maybe a -> a
 fromJust (Just x) = x
