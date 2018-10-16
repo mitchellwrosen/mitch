@@ -17,6 +17,7 @@ import Process (runProcess_, shell)
 import Printf (printf)
 import Read (readMaybe)
 import System.Posix.Signals
+import System.Posix.User (getEffectiveUserID)
 import Text (pack)
 
 data SshTunnelNode
@@ -122,6 +123,18 @@ parser =
       , (\s -> runProcess_ (shell ("pidof " ++ s)))
           <$> strArgument (metavar "NAME")
       , progDesc "Find the pid of a running process"
+      )
+
+    , ( "pid-of-listening-on"
+      , (\port -> do
+          getEffectiveUserID >>= \case
+            0 ->
+              runProcess_ (shell (printf "fuser %d/tcp" (port :: Int)))
+            _ -> do
+              putStrLn "Please run as root."
+              exitFailure)
+        <$> argument auto (metavar "PID")
+      , progDesc "Find the pid of a process listening on a port (TCP)"
       )
 
     , ( "signal"
