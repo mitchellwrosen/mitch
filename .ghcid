@@ -1,1 +1,1 @@
--c "cabal new-repl -O0" --restart mitch.cabal --restart cabal.project
+-c "cabal new-repl -b base -O0" --restart mitch.cabal --restart cabal.project

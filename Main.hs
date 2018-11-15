@@ -1,23 +1,26 @@
-{-# language TemplateHaskell #-}
+{-# LANGUAGE NamedFieldPuns, TemplateHaskell #-}
 
 import Mitchell.Prelude
 
 import Cidr (Cidr(..), parseCidr)
 
-import Bool (bool)
+import Bool                 (bool)
 import Char
-import Optic.Fold ((^..))
-import Optic.Getter (to)
 import Data.Bits.Lens
-import Exception (exitFailure)
-import List (break)
-import Monad (join)
+import Exception            (exitFailure)
+import List                 (break)
+import Monad                (join)
+import Optic.Fold           ((^..))
+import Optic.Getter         (to)
 import Parser.Cli
-import Process (runProcess_, shell)
-import Printf (printf)
-import Read (readMaybe)
+import Printf               (printf)
+import Process              (runProcess_, shell)
+import Read                 (readMaybe)
 import System.Posix.Signals
-import Text (pack)
+import Text                 (pack)
+
+import qualified ByteString
+import qualified File.Binary
 
 data SshTunnelNode
   = Local [Char] Int
@@ -50,6 +53,11 @@ parser =
             )
           ]
       , progDesc "Arch linux porcelain"
+      )
+
+    , ( "bin2hex"
+      , pure (File.Binary.getContents >>= File.Binary.putStr . ByteString.asHexadecimal)
+      , progDesc ""
       )
 
     , ( "display-cidr"
@@ -202,7 +210,7 @@ parser =
           splitOnComma :: [Char] -> [[Char]]
           splitOnComma s =
             case break (== ':') s of
-              (t, []) -> [t]
+              (t, [])  -> [t]
               (t, _:u) -> t : splitOnComma u
         in
           (\case
@@ -237,4 +245,4 @@ commands =
 
 fromJust :: Maybe a -> a
 fromJust (Just x) = x
-fromJust Nothing = error "fromJust: Nothing"
+fromJust Nothing  = error "fromJust: Nothing"
